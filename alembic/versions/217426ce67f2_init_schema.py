@@ -49,7 +49,7 @@ def upgrade() -> None:
     op.create_table(
         'users',
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('email', sa.String(length=255), nullable=False, unique=True),
+        sa.Column('email', sa.String(length=255), nullable=False),
         sa.Column('password_hash', sa.String(length=255), nullable=False),
         sa.Column('first_name', sa.String(length=100), nullable=False),
         sa.Column('last_name', sa.String(length=100), nullable=False),
@@ -57,6 +57,13 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_index(
+        'uq_users_email_active',
+        'users',
+        ['email'],
+        unique=True,
+        postgresql_where=sa.text('deleted_at IS NULL'),
     )
 
     op.create_table(

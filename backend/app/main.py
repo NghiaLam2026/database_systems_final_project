@@ -5,11 +5,53 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import api_router
 from app.config import get_settings
+from app.db.session import SessionLocal
+from app.models.base import UserRole
+from app.models.user import User
+from app.services.auth import hash_password
+
 settings = get_settings()
+
+def ensure_bootstrap_admin() -> None:
+    """Ensure the initial admin exists (configured via .env)."""
+    if not settings.admin_email:
+        return
+    if not settings.admin_password:
+        raise RuntimeError("ADMIN_EMAIL is set but ADMIN_PASSWORD is missing")
+
+    db = SessionLocal()
+    try:
+        # If an active account already exists with this email, do nothing / fail fast.
+        active = (
+            db.query(User)
+            .filter(User.email == settings.admin_email, User.deleted_at.is_(None))
+            .first()
+        )
+        if active is not None:
+            if active.role != UserRole.ADMIN:
+                raise RuntimeError(
+                    "Bootstrap admin email is already used by a non-admin active account. "
+                    "Choose a different ADMIN_EMAIL."
+                )
+            return
+
+        # No active account exists; create the bootstrap admin.
+        user = User(
+                email=settings.admin_email,
+                password_hash=hash_password(settings.admin_password),
+                first_name=settings.admin_first_name,
+                last_name=settings.admin_last_name,
+                role=UserRole.ADMIN,
+            )
+        db.add(user)
+        db.commit()
+    finally:
+        db.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/shutdown (e.g. connect pools, run migrations)."""
+    ensure_bootstrap_admin()
     yield
     # Shutdown: close pools if any
 

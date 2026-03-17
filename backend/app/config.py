@@ -25,12 +25,19 @@ class Settings(BaseSettings):
     )
 
     # JWT
-    secret_key: str = "change-me-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    secret_key: str = Field(default="change-me-in-production", alias="SECRET_KEY")
+    algorithm: str = Field(default="HS256", alias="ALGORITHM")
+    access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # CORS (comma-separated origins, or "*")
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+
+    # Bootstrap admin (source-of-truth admin is configured via .env)
+    # If ADMIN_EMAIL is set, app ensures an admin user exists on startup.
+    admin_email: str | None = Field(default=None, alias="ADMIN_EMAIL")
+    admin_password: str | None = Field(default=None, alias="ADMIN_PASSWORD")
+    admin_first_name: str = Field(default="Admin", alias="ADMIN_FIRST_NAME")
+    admin_last_name: str = Field(default="User", alias="ADMIN_LAST_NAME")
 
 @lru_cache
 def get_settings() -> Settings:
